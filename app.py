@@ -50,7 +50,7 @@ class WorkerThread(QThread):
                 yt.length,
                 yt.publish_date,
                 # populate a list of progressive mp4 resolutions for the download options
-                [f'{res.resolution} - {round(res.filesize/1e+6, 1)}MB' for res in yt.streams.filter(progressive='true', file_extension='mp4').order_by('resolution')]
+                [f'{res.resolution} - {round(res.filesize/1.049e+6, 1)}MB' for res in yt.streams.filter(progressive='true', file_extension='mp4').order_by('resolution')]
             ))
         except:
             # emitting the error signal
@@ -65,10 +65,9 @@ class DownloadThread(QThread):
     # setup download error signal
     download_err = pyqtSignal()
 
-    def __init__(self, yt, url, download_type):
+    def __init__(self, yt, download_type):
         super(DownloadThread, self).__init__()
         self.yt = yt
-        self.url = url
         self.download_type = download_type
 
     def run(self):
@@ -181,6 +180,7 @@ class YTdownloader(QWidget):
         downloadBtn.addWidget(self.download)
         downloadBtn.addWidget(self.download_audio)
         downloadSec.addWidget(self.progress_bar)
+        downloadSec.addSpacing(10)
         downloadSec.addLayout(downloadBtn)
 
         # add content to parent layout
@@ -220,13 +220,14 @@ class YTdownloader(QWidget):
             self.message.critical(
                 self,
                 'Error',
-                'Conection failed!\nAre you sure you\'re connected to the internet ? '
+                'Connection failed!\nAre you sure you\'re connected to the internet ? '
             )
         elif self.button.text() == 'Get':
-            self.button.setText('Fetching...')
+            self.button.setText('Stop')
+            # indicate progress bar as busy
+            self.progress_bar.setRange(0, 0)
             # set fetching flag
             self.isFetching = True
-            self.button.setDisabled(True)
             # setup a worker thread to keep UI responsive
             self.worker = WorkerThread(self.urlBox.text())
             self.worker.start()
@@ -237,16 +238,22 @@ class YTdownloader(QWidget):
             # catch the error signal
             self.worker.worker_err_response.connect(self.err_slot)
         elif self.button.text() == 'Stop':
-            # stop download thread
-            self.downlod_thread.terminate()
-            # show the warning message
-            self.message.information(
-                self,
-                'Interrupted',
-                'Download interrupted!\nThe process was aborted while the file was being downloaded... '
-            )
-            # reset pogress bar
-            self.progress_bar.reset()
+            if self.isFetching:
+                # stop worker thread
+                self.worker.terminate()
+                # set back the button text
+                self.button.setText('Get')
+            elif self.isDownloading:
+                # stop download thread
+                self.download_thread.terminate()
+                # show the warning message
+                self.message.information(
+                    self,
+                    'Interrupted',
+                    'Download interrupted!\nThe process was aborted while the file was being downloaded... '
+                )
+                # reset pogress bar
+                self.progress_bar.reset()
 
     # download options slot
     def getContent(self, id):
@@ -255,7 +262,7 @@ class YTdownloader(QWidget):
             self.message.warning(
                 self,
                 'Warning',
-                'Please wait!\nWait while the details are being fetched... '
+                'Please wait!\nWait while the details are being fetched again... '
             )
         else:
             # disable the download options
@@ -267,30 +274,31 @@ class YTdownloader(QWidget):
             self.button.setText('Stop')
             # setup download thread
             if id == 0:
-                self.downlod_thread = DownloadThread(self.yt, self.urlBox.text(), self.download.currentText()[:4])
+                self.download_thread = DownloadThread(self.yt, self.download.currentText()[:4])
             else:
-                self.downlod_thread = DownloadThread(self.yt, self.urlBox.text(), 'audio')
+                self.download_thread = DownloadThread(self.yt, 'audio')
             # start the thread
-            self.downlod_thread.start()
+            self.download_thread.start()
             # catch the finished signal
-            self.downlod_thread.finished.connect(self.download_finished_slot)
+            self.download_thread.finished.connect(self.download_finished_slot)
             # catch the response signal
-            self.downlod_thread.download_response.connect(self.download_response_slot)
+            self.download_thread.download_response.connect(self.download_response_slot)
             # catch the complete signal
-            self.downlod_thread.download_complete.connect(self.download_complete_slot)
+            self.download_thread.download_complete.connect(self.download_complete_slot)
             # catch the error signal
-            self.downlod_thread.download_err.connect(self.download_err_slot)
+            self.download_thread.download_err.connect(self.download_err_slot)
 
     # finished slot
     def finished_slot(self):
+        # remove progress bar busy indication
+        self.progress_bar.setRange(0, 100)
         # unset fetching flag
         self.isFetching = False
 
     # response slot
     def response_slot(self, res):
-        # set back the button text and enable it
+        # set back the button text
         self.button.setText('Get')
-        self.button.setDisabled(False)
         # save the yt object for speeding up download
         self.yt = res[0]
         # set the actual thumbnail of requested video
@@ -319,13 +327,12 @@ class YTdownloader(QWidget):
             'Warning',
             'Something went wrong!\nProbably a broken link or some restricted content... '
         )
-        # set back the button text and enable it
+        # set back the button text
         self.button.setText('Get')
-        self.button.setDisabled(False)
 
     # download finished slot
     def download_finished_slot(self):
-        # set back the button text and enable it
+        # set back the button text
         self.button.setText('Get')
         # now enable the download options
         self.download.setDisabled(False)
@@ -384,6 +391,9 @@ if __name__ == '__main__':
         }
         QComboBox {
             padding: 3px 30px 3px 45px;
+        }
+        QProgressBar {
+            text-align: center;
         }
         QMessageBox QLabel {
             font-size: 13px;
