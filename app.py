@@ -127,10 +127,9 @@ class YTdownloader(QWidget):
         self.message = QMessageBox()
 
         # setting up widgets
-        urlLabel = QLabel('URL: ')
         self.urlBox = QLineEdit()
         self.urlBox.setFocusPolicy(Qt.FocusPolicy.ClickFocus or Qt.FocusPolicy.NoFocus)
-        self.urlBox.setPlaceholderText('Enter or paste video URL...')
+        self.urlBox.setPlaceholderText('🔍 Enter or paste video URL...')
         self.button = QPushButton('Get')
         self.button.setDefault(True)
         self.button.clicked.connect(self.getDetails)
@@ -153,17 +152,16 @@ class YTdownloader(QWidget):
         
         # download options
         self.download = QComboBox()
-        self.download.setPlaceholderText('Download video')
+        self.download.setPlaceholderText('Download Video')
         self.download.activated.connect(lambda: self.getContent(0))
         self.download.setEnabled(False)
 
         # download audio button
-        self.download_audio = QPushButton('Download audio')
+        self.download_audio = QPushButton('Download Audio')
         self.download_audio.clicked.connect(lambda: self.getContent(1))
         self.download_audio.setEnabled(False)
 
         # add widgets and layouts
-        topBar.addWidget(urlLabel)
         topBar.addWidget(self.urlBox)
         topBar.addWidget(self.button)
 
@@ -346,6 +344,11 @@ class YTdownloader(QWidget):
     def download_response_slot(self, per):
         # update progress bar
         self.progress_bar.setValue(per)
+        # adjust the font color to maintain the contrast
+        if per > 52:
+            self.progress_bar.setStyleSheet('QProgressBar { color: #fff }')
+        else:
+            self.progress_bar.setStyleSheet('QProgressBar { color: #000 }')
     
     # download complete slot
     def download_complete_slot(self, location):
@@ -372,35 +375,93 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     # setup a custom styleSheet
     app.setStyleSheet('''
+        * {
+            background-color: #fff;
+        }
         QWidget {
             font-size: 15px;
+            border-radius: 4px;
         }
         QStatusBar {
             font-size: 12px;
         }
         QLineEdit {
-            border: none;
-            border-bottom: 2px solid #808080;
-            padding: 2px 5px;
-            margin: 0 10px;
-            background: transparent;
+            padding: 4px 10px;
+            margin-right: 10px;
+            border: 2px solid #bababa;
+            font-size: 16px;
+            font-family: 'Segoe UI Symbol';
+            selection-background-color: #0078d4;
+        }
+        QLineEdit:hover {
+            border-color: #808080;
+        }
+        QLineEdit:focus {
+            border-color: #0078d4;
+        }
+        QMenu {
+            color: #000;
+            border: 1px solid #bababa;
+            padding: 5px;
+        }
+        QMenu::item {
+            padding: 3px 25px;
+            border-radius: 4px; 
+        }
+        QMenu::item:selected {
+            color: #fff;
+            background-color: #0078d4;
         }
         QPushButton {
             width: 125px;
-            padding: 5.5px 0;
+            padding: 7px 0;
+            color: #fff;
+            border: none;
+            background-color: #0078d4;
+        }
+        QPushButton:hover, QComboBox:hover {
+            background-color: #00599d;
+        }
+        QPushButton:disabled, QComboBox:disabled {
+            background-color: #77b7e9;
         }
         QComboBox {
-            padding: 3px 30px 3px 45px;
+            padding: 5.5px 30px 5.5px 45px;
+            color: #fff;
+            border: none;
+            background-color: #0078d4;
+        }
+        QComboBox::drop-down {
+            border-radius: 0;
+        }
+        QComboBox:on {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        QComboBox QAbstractItemView {
+            border-radius: 0;
+            outline: 0;
+        }
+        QComboBox QAbstractItemView::item {
+            height: 33px;
+            padding-left: 42px;
+            background-color: #fff;
+        }
+        QComboBox QAbstractItemView::item:selected {
+            background-color: #0078d4;
         }
         QProgressBar {
             text-align: center;
+        }
+        QProgressBar::chunk {
+            background: #0078d4;
         }
         QMessageBox QLabel {
             font-size: 13px;
         }
         QMessageBox QPushButton {
             width: 50px;
-            padding: 4px 25px;
+            padding: 6px 25px;
         }
     ''')
     window = YTdownloader()
