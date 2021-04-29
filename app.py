@@ -1,11 +1,10 @@
 import sys, socket, time, subprocess
 from pytube import YouTube
-from PyQt6.QtWidgets import QApplication, QStatusBar, QWidget, QLabel, QLineEdit, QPushButton, QProgressBar, QComboBox, QMessageBox, QVBoxLayout, QHBoxLayout
-from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QApplication, QStatusBar, QWidget, QLabel, QLineEdit, QPushButton, QProgressBar, QComboBox, QMessageBox, QFileDialog, QVBoxLayout, QHBoxLayout
+from PyQt6.QtGui import QIcon, QPixmap, QCursor
+from PyQt6.QtCore import Qt, QDir, QThread, pyqtSignal
 from urllib.request import urlopen
 from datetime import timedelta
-from os import path
 
 class ConnectionThread(QThread):
     con_response = pyqtSignal(bool)
@@ -65,10 +64,11 @@ class DownloadThread(QThread):
     # setup download error signal
     download_err = pyqtSignal()
 
-    def __init__(self, yt, download_type):
+    def __init__(self, yt, download_type, path):
         super(DownloadThread, self).__init__()
         self.yt = yt
         self.download_type = download_type
+        self.path = path
 
     def run(self):
         # progress callback for progress bar updation
@@ -84,10 +84,10 @@ class DownloadThread(QThread):
             self.yt.register_on_complete_callback(downloadComplete)
             # audio request
             if self.download_type == 'audio':
-                self.yt.streams.get_audio_only().download(output_path=f'{path.expanduser("~")}\Videos', filename_prefix='(Audio) ')
+                self.yt.streams.get_audio_only().download(output_path=self.path, filename_prefix='[Audio] ')
             # video request
             else:
-                self.yt.streams.filter(progressive=True, file_extension='mp4').get_by_resolution(self.download_type).download(output_path=f'{path.expanduser("~")}\Videos', filename_prefix=f'({self.download_type}) ')
+                self.yt.streams.filter(progressive=True, file_extension='mp4').get_by_resolution(self.download_type).download(output_path=self.path, filename_prefix=f'[{self.download_type}] ')
         except:
             # emitting the error signal
             self.download_err.emit()
@@ -99,10 +99,13 @@ class YTdownloader(QWidget):
         self.isFetching = False
         self.isDownloading = False
 
+        # default output path
+        self.outputPath = f'{QDir.homePath()}/videos'
+
         # setup some window specific things
         self.setWindowTitle('YouTube Downloader')
         self.setWindowIcon(QIcon('assets/yt-icon.ico'))
-        self.setFixedSize(705, 334)
+        self.setFixedSize(705, 343)
 
         # parent layout
         layout = QVBoxLayout()
@@ -120,6 +123,12 @@ class YTdownloader(QWidget):
         downloadSec = QHBoxLayout()
         downloadBtn = QVBoxLayout()
 
+        # output path link button
+        self.outputBtn = QPushButton('📂  Output Path')
+        self.outputBtn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.outputBtn.setToolTip(self.outputPath)
+        self.outputBtn.clicked.connect(self.setOutputPath)
+
         # status bar
         self.statusBar = QStatusBar()
 
@@ -132,6 +141,7 @@ class YTdownloader(QWidget):
         self.urlBox.setPlaceholderText('🔍 Enter or paste video URL...')
         self.button = QPushButton('Get')
         self.button.setDefault(True)
+        self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button.clicked.connect(self.getDetails)
 
         # thumbnail
@@ -153,11 +163,13 @@ class YTdownloader(QWidget):
         # download options
         self.download = QComboBox()
         self.download.setPlaceholderText('Download Video')
+        self.download.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.download.activated.connect(lambda: self.getContent(0))
         self.download.setEnabled(False)
 
         # download audio button
         self.download_audio = QPushButton('Download Audio')
+        self.download_audio.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.download_audio.clicked.connect(lambda: self.getContent(1))
         self.download_audio.setEnabled(False)
 
@@ -180,6 +192,10 @@ class YTdownloader(QWidget):
         downloadSec.addWidget(self.progress_bar)
         downloadSec.addSpacing(10)
         downloadSec.addLayout(downloadBtn)
+
+        # status bar
+        self.statusBar.setSizeGripEnabled(False)
+        self.statusBar.addPermanentWidget(self.outputBtn)
 
         # add content to parent layout
         layout.addLayout(topBar)
@@ -210,6 +226,15 @@ class YTdownloader(QWidget):
             self.statusBar.showMessage('🔴  Connection interrupted!', 3000)
         elif curMsg != '🔴  Disconnected': 
             self.statusBar.showMessage('🔴  Disconnected')
+
+    # set output path slot
+    def setOutputPath(self):
+        # update the output path
+        path = str(QFileDialog.getExistingDirectory(self, "Select Output Directory"))
+        if path:
+            self.outputPath = path
+            # update tooltip
+            self.outputBtn.setToolTip(path)
 
     # get button slot
     def getDetails(self):
@@ -260,7 +285,7 @@ class YTdownloader(QWidget):
             self.message.warning(
                 self,
                 'Warning',
-                'Please wait!\nWait while the details are being fetched again... '
+                'Please wait!\nWait while the details are being fetched... '
             )
         else:
             # disable the download options
@@ -272,9 +297,9 @@ class YTdownloader(QWidget):
             self.button.setText('Stop')
             # setup download thread
             if id == 0:
-                self.download_thread = DownloadThread(self.yt, self.download.currentText()[:4])
+                self.download_thread = DownloadThread(self.yt, self.download.currentText()[:4], self.outputPath)
             else:
-                self.download_thread = DownloadThread(self.yt, 'audio')
+                self.download_thread = DownloadThread(self.yt, 'audio', self.outputPath)
             # start the thread
             self.download_thread.start()
             # catch the finished signal
@@ -352,6 +377,8 @@ class YTdownloader(QWidget):
     
     # download complete slot
     def download_complete_slot(self, location):
+        # use native separators
+        location = QDir.toNativeSeparators(location)
         # show the success message
         if self.message.information(
             self,
@@ -384,6 +411,16 @@ if __name__ == '__main__':
         }
         QStatusBar {
             font-size: 12px;
+        }
+        QStatusBar QPushButton {
+            background-color: none;
+            font-family: 'Segoe UI Symbol';
+            padding: 0 40px;
+            color: #333;
+        }
+        QStatusBar QPushButton:hover {
+            background-color: none;
+            color: #0078d4;
         }
         QLineEdit {
             padding: 4px 10px;
@@ -455,6 +492,7 @@ if __name__ == '__main__':
         }
         QProgressBar::chunk {
             background: #0078d4;
+            border-radius: 4px;
         }
         QMessageBox QLabel {
             font-size: 13px;

@@ -8,18 +8,18 @@ Another cool, school project 😉.
 
 ## Screenshots 📸
 
-![1](https://user-images.githubusercontent.com/36320943/115836826-91b96380-a435-11eb-9db5-db653c91ca75.png)
-![2](https://user-images.githubusercontent.com/36320943/115836848-9716ae00-a435-11eb-9cc5-aca68f48fb13.png)
-![3](https://user-images.githubusercontent.com/36320943/115836865-9b42cb80-a435-11eb-9ae5-b15408b96b23.png)
+![1](https://user-images.githubusercontent.com/36320943/116395756-28c15980-a842-11eb-8920-61d8efe6cdd8.png)
 
+![2](https://user-images.githubusercontent.com/36320943/116395770-2ced7700-a842-11eb-9bde-ed14a3f041dd.png)
 
-
-
-
-
+![3](https://user-images.githubusercontent.com/36320943/116395778-2fe86780-a842-11eb-81e2-f8df8e3829f3.png)
 
 ## Dependencies 🐍
 
-* python3 <br/>
-* PyQt6 <br/>
-* pytube
+-   python3 <br/>
+-   PyQt6 <br/>
+-   pytube
+
+```bash
+pip install PyQt6 pytube
+```
