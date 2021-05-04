@@ -137,10 +137,8 @@ class YTdownloader(QWidget):
 
         # setting up widgets
         self.urlBox = QLineEdit()
-        self.urlBox.setFocusPolicy(Qt.FocusPolicy.ClickFocus or Qt.FocusPolicy.NoFocus)
         self.urlBox.setPlaceholderText('🔍 Enter or paste video URL...')
         self.button = QPushButton('Get')
-        self.button.setDefault(True)
         self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button.clicked.connect(self.getDetails)
 
@@ -311,6 +309,12 @@ class YTdownloader(QWidget):
             # catch the error signal
             self.download_thread.download_err.connect(self.download_err_slot)
 
+    # handling enter key for get/stop button
+    def keyPressEvent(self, event):
+        self.urlBox.setFocus()
+        if event.key() == Qt.Key.Key_Enter.value or event.key() == Qt.Key.Key_Return.value:
+            self.getDetails()
+
     # finished slot
     def finished_slot(self):
         # remove progress bar busy indication
@@ -409,8 +413,12 @@ if __name__ == '__main__':
             font-size: 15px;
             border-radius: 4px;
         }
+        QToolTip {
+            padding: 4px; 
+            border: 1px solid #bababa;
+        }
         QStatusBar {
-            font-size: 12px;
+            font-size: 13px;
         }
         QStatusBar QPushButton {
             background-color: none;
@@ -437,7 +445,6 @@ if __name__ == '__main__':
             border-color: #0078d4;
         }
         QMenu {
-            color: #000;
             border: 1px solid #bababa;
             padding: 5px;
         }
@@ -458,6 +465,9 @@ if __name__ == '__main__':
         }
         QPushButton:hover, QComboBox:hover {
             background-color: #00599d;
+        }
+        QPushButton:pressed, QComboBox:pressed {
+            background-color: #00477c;
         }
         QPushButton:disabled, QComboBox:disabled {
             background-color: #77b7e9;
